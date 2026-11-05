@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Luneta Park as an Urban Chessboard: The Queen's Vision</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { width: 100vw; height: 100vh; }
+        
+        /* Custom CSS for Title and Legend Boxes */
+        .info-box {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333;
+        }
+        .map-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .legend-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        .color-box {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            border: 1px solid #333;
+        }
+        .line-box {
+            width: 16px;
+            height: 3px;
+            background: #1976d2;
+            margin-right: 8px;
+        }
+        .point-box {
+            width: 12px;
+            height: 12px;
+            background: #9c27b0;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            margin-right: 10px;
+            margin-left: 2px;
+        }
+        .metadata {
+            margin-top: 12px;
+            font-size: 11px;
+            border-top: 1px solid #ccc;
+            padding-top: 8px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Initialize the map centered near Ermita/Rizal Park
+        var map = L.map('map').setView([14.583, 120.978], 17);
+
+        // OpenStreetMap basemap
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Custom Title Control (Top Left)
+        var titleControl = L.control({position: 'topleft'});
+        titleControl.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info-box map-title');
+            div.innerHTML = "Day 5: Senses (Sight) - The Queen's Line of Sight";
+            return div;
+        };
+        titleControl.addTo(map);
+
+        // Custom Legend & Metadata Control (Bottom Right)
+        var legendControl = L.control({position: 'bottomright'});
+        legendControl.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info-box');
+            div.innerHTML = `
+                <div class="legend-title">Legend & Metadata</div>
+                
+                <div class="legend-item">
+                    <div class="point-box"></div> Queen Piece
+                </div>
+                <div class="legend-item">
+                    <div class="line-box"></div> Sightlines
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:#d32f2f; border-color:#8b0000;"></div> Building Obstacles
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:#4a5d23; opacity:0.7;"></div> 
+                    <div class="color-box" style="background:#ffffff; opacity:0.4;"></div> 
+                    8x8 Chessboard Grid
+                </div>
+
+                <div class="metadata">
+                    <b>Data Source:</b> OpenStreetMap<br>
+                    <b>GIS Software:</b> QGIS 3.40.8<br>
+                    <b>Web Library:</b> Leaflet.js
+                </div>
+            `;
+            return div;
+        };
+        legendControl.addTo(map);
+
+        // Wait for all 4 files to download before drawing anything
+        Promise.all([
+            fetch('grid.geojson').then(r => r.json()),
+            fetch('buildings.geojson').then(r => r.json()),
+            fetch('sightlines.geojson').then(r => r.json()),
+            fetch('Queen.geojson').then(r => r.json())
+        ]).then(([gridData, buildingsData, sightlinesData, queenData]) => {
+            
+            // Bottom Layer: Grid
+            L.geoJSON(gridData, {
+                style: function(feature) {
+                    let isDark = feature.properties.is_dark === 0;
+                    return {
+                        color: "#333333", 
+                        weight: 1, 
+                        fillColor: isDark ? "#4a5d23" : "#ffffff", 
+                        fillOpacity: isDark ? 0.7 : 0.4
+                    };
+                }
+            }).addTo(map);
+
+            // Middle Layer: Buildings
+            L.geoJSON(buildingsData, {
+                style: {color: "#8b0000", weight: 1, fillColor: "#d32f2f", fillOpacity: 0.8}
+            }).addTo(map);
+
+            // Top Layer: Sightlines
+            L.geoJSON(sightlinesData, {
+                style: {color: "#1976d2", weight: 2, opacity: 0.8}
+            }).addTo(map);
+
+            // Very Top Layer: Queen Piece
+            L.geoJSON(queenData, {
+                pointToLayer: function (feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        radius: 8, fillColor: "#9c27b0", color: "#ffffff", weight: 2, fillOpacity: 1
+                    });
+                }
+            }).addTo(map);
+        });
+    </script>
+</body>
+</html>
